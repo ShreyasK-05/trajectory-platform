@@ -10,7 +10,7 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    private static final String SECRET = "2410ea629073c9148011e924ba4f4cd6a7f9be4793df24d352e3f5faa4495fd1";
+    private static final String SECRET = "${SECRET_KEY}";
 
     public String generateToken(String email, String role) {
         SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());

@@ -10,7 +10,7 @@ import javax.crypto.SecretKey;
 public class JwtUtil {
 
     // THIS MUST MATCH THE EXACT SECRET IN YOUR AUTH SERVICE!
-    private static final String SECRET = "2410ea629073c9148011e924ba4f4cd6a7f9be4793df24d352e3f5faa4495fd1";
+    private static final String SECRET = "${SECRET_KEY}";
 
     public void validateToken(final String token) {
         SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
