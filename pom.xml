@@ -11,6 +11,8 @@
 
     <modules>
         <module>discovery-server</module>
+        <module>api-gateway</module>
+        <module>auth-service</module>
     </modules>
 
     <properties>
