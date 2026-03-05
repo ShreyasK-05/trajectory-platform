@@ -44,6 +44,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
         try {
             jwtUtil.validateToken(token);
         } catch (Exception e) {
+            e.printStackTrace();
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
             response.getWriter().write("Invalid or expired token");
             return;

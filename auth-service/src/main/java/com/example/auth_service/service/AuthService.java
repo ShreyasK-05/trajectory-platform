@@ -47,6 +47,6 @@ public class AuthService {
         }
 
         // 3. If they match, generate and return the JWT
-        return jwtService.generateToken(user.getEmail(), user.getRole());
+        return jwtService.generateToken(user.getId(), user.getEmail(), user.getRole());
     }
 }
