@@ -55,9 +55,8 @@ services:
     image: minio/minio:latest
     container_name: trajectory_minio
     environment:
-      # These must match exactly what we put in the application.yml!
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_USER}
     ports:
       - "9000:9000" # API Port (Spring Boot talks to this one)
       - "9001:9001" # Web UI Console (You look at this in your browser)

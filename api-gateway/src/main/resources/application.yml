@@ -13,6 +13,19 @@ spring:
               uri: lb://AUTH-SERVICE
               predicates:
                 - Path=/auth/**
+            - id: profile-service-route
+              uri: lb://USER-PROFILE-SERVICE
+              predicates:
+                - Path=/profile/**
+            - id: profile-service-route
+              uri: lb://USER-PROFILE-SERVICE
+              predicates:
+                - Path=/profile/**
+
+            - id: jobs-service-route
+              uri: lb://USER-PROFILE-SERVICE
+              predicates:
+                - Path=/jobs/**
 
 eureka:
   client:
