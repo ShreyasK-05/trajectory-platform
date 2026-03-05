@@ -46,9 +46,24 @@ services:
       - "7474:7474" # HTTP Web Browser (For viewing nodes)
       - "7687:7687" # Bolt protocol (Used by Spring Boot to send queries)
     volumes:
-      # CHANGED: Now using secure Docker-managed volumes!
       - trajectory_neo4j_data:/data
       - trajectory_neo4j_logs:/logs
+    restart: unless-stopped
+
+  # 4. MinIO (S3-Compatible Object Storage for Resumes)
+  minio:
+    image: minio/minio:latest
+    container_name: trajectory_minio
+    environment:
+      # These must match exactly what we put in the application.yml!
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000" # API Port (Spring Boot talks to this one)
+      - "9001:9001" # Web UI Console (You look at this in your browser)
+    command: server /data --console-address ":9001"
+    volumes:
+      - trajectory_minio_data:/data
     restart: unless-stopped
 
 # Declaring all the secure Docker-managed volumes
@@ -57,3 +72,4 @@ volumes:
   trajectory_kafka_data:
   trajectory_neo4j_data:
   trajectory_neo4j_logs:
+  trajectory_minio_data: # <-- Added the MinIO storage vault here
