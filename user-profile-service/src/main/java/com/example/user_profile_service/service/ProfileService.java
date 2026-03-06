@@ -17,6 +17,7 @@ public class ProfileService {
     private final JwtExtractor jwtExtractor;
     private final PdfExtractor pdfExtractor;
     private final FileStorageService fileStorageService;
+    private final KafkaEventPublisher kafkaEventPublisher;
 
     public String onboardUser(String authHeader, ProfileRequest request) {
         // 1. EXTRACT THE MASTER KEY (userId) FROM THE JWT!
@@ -56,7 +57,7 @@ public class ProfileService {
 
         // 3. Save to PostgreSQL
         profileRepository.save(profile);
-
+        kafkaEventPublisher.publishResumeUploaded(userId, extractedText);
         return "Success! Text extracted and file saved at: " + minioUrl;
     }
 }
