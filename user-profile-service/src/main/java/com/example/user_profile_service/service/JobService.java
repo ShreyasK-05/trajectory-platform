@@ -13,6 +13,7 @@ public class JobService {
 
     private final JobRepository jobRepository;
     private final JwtExtractor jwtExtractor;
+    private final KafkaEventPublisher kafkaEventPublisher;
 
     public String createJob(String authHeader, JobRequest request) {
         // 1. Extract the user's ID and Role from the JWT
@@ -35,7 +36,7 @@ public class JobService {
 
         // 4. Save to PostgreSQL
         jobRepository.save(newJob);
-
+        kafkaEventPublisher.publishJobCreated(newJob.getId(), newJob.getTitle(), newJob.getDescription());
         return "Job '" + newJob.getTitle() + "' posted successfully by Recruiter ID: " + userId;
     }
 }

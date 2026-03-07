@@ -5,6 +5,7 @@ import com.example.user_profile_service.service.ProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,6 +15,8 @@ import org.springframework.web.multipart.MultipartFile;
 public class ProfileController {
 
     private final ProfileService profileService;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+
     @GetMapping("/me")
     public ResponseEntity<String> getMyProfile() {
         return ResponseEntity.ok("Welcome to your secure profile! You bypassed the Gateway Bouncer using a valid JWT!");
@@ -40,5 +43,15 @@ public class ProfileController {
 
         String response = profileService.uploadResume(authHeader, file);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/simulate-ai-callback")
+    public ResponseEntity<String> simulateAiCallback(@RequestParam Long userId) {
+        String fakePythonMessage = "{\"entityId\": " + userId + ", \"entityType\": \"USER\", \"status\": \"SUCCESS\"}";
+
+        // We publish it to the topic
+        kafkaTemplate.send("trajectory.ai.vectorized", fakePythonMessage);
+
+        return ResponseEntity.ok("Simulated AI callback sent to Kafka for User " + userId);
     }
 }
