@@ -34,3 +34,9 @@ minio_data/
 *.log
 .DS_Store
 Thumbs.db
+### Python ###
+.venv/
+__pycache__/
+
+### files ###
+trajectory.session.sql
