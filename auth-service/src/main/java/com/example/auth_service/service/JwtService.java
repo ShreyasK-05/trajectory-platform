@@ -10,10 +10,11 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    private static final String SECRET = "${SECRET_KEY}";
+    @org.springframework.beans.factory.annotation.Value("${SECRET_KEY}")
+    private String secretKey;
 
     public String generateToken(Long userId, String email, String role) {
-        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
+        SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes());
 
         return Jwts.builder()
                 .subject(email)

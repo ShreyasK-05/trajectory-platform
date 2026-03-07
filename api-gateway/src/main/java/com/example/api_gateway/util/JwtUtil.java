@@ -10,10 +10,11 @@ import javax.crypto.SecretKey;
 public class JwtUtil {
 
     // THIS MUST MATCH THE EXACT SECRET IN YOUR AUTH SERVICE!
-    private static final String SECRET = "${SECRET_KEY}";
+    @org.springframework.beans.factory.annotation.Value("${SECRET_KEY}")
+    private String secretKey;
 
     public void validateToken(final String token) {
-        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
+        SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes());
         // This will automatically throw an exception if the token is tampered with or expired!
         Jwts.parser()
                 .verifyWith(key)

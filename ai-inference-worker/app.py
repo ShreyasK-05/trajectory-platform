@@ -31,12 +31,15 @@ def initialize_database():
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+        
+        # FIXED: id is now a string, and Primary Key is a combo of ID + Type
         create_table_query = """
         CREATE TABLE IF NOT EXISTS ai_embeddings (
-            id UUID PRIMARY KEY,                   
+            id VARCHAR(50),                   
             entity_type VARCHAR(20),               
             embedding vector(384),                 
-            created_at TIMESTAMP DEFAULT NOW()
+            created_at TIMESTAMP DEFAULT NOW(),
+            PRIMARY KEY (id, entity_type)
         );
         """
         cur.execute(create_table_query)
@@ -74,16 +77,20 @@ def start_kafka_listener():
             vector = model.encode(clean_skills_string).tolist()
             conn = get_db_connection()
             cur = conn.cursor()
+            
+            # FIXED: ON CONFLICT now looks at the composite key
             cur.execute("""
                 INSERT INTO ai_embeddings (id, entity_type, embedding) 
                 VALUES (%s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET embedding = EXCLUDED.embedding;
-            """, (entity_id, entity_type, vector))
+                ON CONFLICT (id, entity_type) DO UPDATE SET embedding = EXCLUDED.embedding, created_at = NOW();
+            """, (str(entity_id), entity_type, vector))
             conn.commit()
             cur.close(); conn.close()
 
             callback_topic = 'trajectory.ai.job_vectorized' if is_job else 'trajectory.ai.vectorized'
-            producer.produce(callback_topic, json.dumps({"id": entity_id, "status": "READY"}).encode('utf-8'))
+            
+            # FIXED: Java is specifically looking for "entityId" and "SUCCESS"
+            producer.produce(callback_topic, json.dumps({"entityId": entity_id, "status": "SUCCESS"}).encode('utf-8'))
             producer.flush()
             print(f"[{entity_type}] Vectorized and saved ID: {entity_id}")
     
@@ -94,16 +101,11 @@ def start_kafka_listener():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Everything BEFORE the 'yield' happens on STARTUP
     initialize_database()
     threading.Thread(target=start_kafka_listener, daemon=True).start()
-    
-    yield # This hands control over to the web server to run normally
-    
-    # Everything AFTER the 'yield' happens on SHUTDOWN
+    yield 
     print("Shutting down the AI Engine safely...")
 
-# Pass the lifespan function into the FastAPI app
 app = FastAPI(title="Trajectory AI Engine", lifespan=lifespan)
 
 @app.get("/match/user/{user_id}")
@@ -112,43 +114,49 @@ def get_job_matches(user_id: str, limit: int = 5):
         conn = get_db_connection()
         cur = conn.cursor()
 
+        # FIXED: Match queries now strictly look at entity_type too
         match_query = """
-            SELECT id, 1 - (embedding <=> (SELECT embedding FROM ai_embeddings WHERE id = %s)) AS similarity_score
+            SELECT id, 1 - (embedding <=> (SELECT embedding FROM ai_embeddings WHERE id = %s AND entity_type = 'USER')) AS similarity_score
             FROM ai_embeddings
             WHERE entity_type = 'JOB'
-            ORDER BY embedding <=> (SELECT embedding FROM ai_embeddings WHERE id = %s)
+            ORDER BY embedding <=> (SELECT embedding FROM ai_embeddings WHERE id = %s AND entity_type = 'USER')
             LIMIT %s;
         """
 
-        cur.execute(match_query, (user_id, user_id, limit))
+        cur.execute(match_query, (str(user_id), str(user_id), limit))
         results = cur.fetchall()
         cur.close(); conn.close()
 
         if not results:
             return {"message": "No jobs found or user vector not available."}
         
-        matches = [{"job_id": str(row[0]), "similarity_score": round(row[1]*100, 2)} for row in results]
-        return {"user_id": user_id, "matches": matches}
+        matches = [
+            {"job_id": str(row[0]), "similarity_score": round(row[1]*100, 2)} 
+            for row in results if row[1] is not None
+        ]
+        
+        if not matches:
+            return {"message": "No matchable jobs found, or user vector is missing. Please upload a resume."}
+        else:
+            return {"user_id": user_id, "top_matches": matches}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-# --- 5. THE REVERSE MATCHING ENDPOINT (FOR EMPLOYERS) ---
 @app.get("/match/job/{job_id}")
 def get_user_matches(job_id: str, limit: int = 5):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Notice the WHERE clause is now looking for 'USER'
         match_query = """
-            SELECT id, 1 - (embedding <=> (SELECT embedding FROM ai_embeddings WHERE id = %s)) AS similarity_score
+            SELECT id, 1 - (embedding <=> (SELECT embedding FROM ai_embeddings WHERE id = %s AND entity_type = 'JOB')) AS similarity_score
             FROM ai_embeddings
             WHERE entity_type = 'USER'
-            ORDER BY embedding <=> (SELECT embedding FROM ai_embeddings WHERE id = %s)
+            ORDER BY embedding <=> (SELECT embedding FROM ai_embeddings WHERE id = %s AND entity_type = 'JOB')
             LIMIT %s;
         """
-        cur.execute(match_query, (job_id, job_id, limit))
+        cur.execute(match_query, (str(job_id), str(job_id), limit))
         results = cur.fetchall()
         cur.close(); conn.close()
         
@@ -160,4 +168,3 @@ def get_user_matches(job_id: str, limit: int = 5):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    

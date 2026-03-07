@@ -10,12 +10,13 @@ import javax.crypto.SecretKey;
 @Component
 public class JwtExtractor {
 
-    private static final String SECRET = "${SECRET_KEY}";
+    @org.springframework.beans.factory.annotation.Value("${SECRET_KEY}")
+    private String secretKey;
 
     private Claims extractAllClaims(String authHeader) {
         // Strip out the "Bearer " prefix to get just the token string
         String token = authHeader.substring(7);
-        SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
+        SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes());
 
         return Jwts.parser()
                 .verifyWith(key)
