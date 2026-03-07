@@ -8,6 +8,8 @@ from sentence_transformers import SentenceTransformer
 from confluent_kafka import Consumer, Producer, KafkaException
 from contextlib import asynccontextmanager
 
+from llm_service import extract_skills
+
 # Load the same .env file from the root folder
 load_dotenv(dotenv_path="../.env")
 print("===============Loading model==============")
@@ -62,10 +64,14 @@ def start_kafka_listener():
 
             is_job = msg.topic() == 'trajectory.job.created'
             entity_id = payload.get("jobId") if is_job else payload.get("userId")
-            text_to_vectorize = payload.get("description") if is_job else payload.get("resumeText")
+            raw_text = payload.get("description") if is_job else payload.get("resumeText")
             entity_type = 'JOB' if is_job else 'USER'
 
-            vector = model.encode(text_to_vectorize).tolist()
+            print("Sending to LLM for extraction...")
+            clean_skills_string = extract_skills(raw_text)
+            print(f"Cleaned Skills for embedding: {clean_skills_string}")
+
+            vector = model.encode(clean_skills_string).tolist()
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute("""
@@ -154,3 +160,4 @@ def get_user_matches(job_id: str, limit: int = 5):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
