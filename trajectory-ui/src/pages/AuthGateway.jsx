@@ -1,0 +1,1 @@
+export default function AuthGateway() { return <div>Auth Screen</div>; }
