@@ -1,9 +1,11 @@
 package com.example.user_profile_service.controller;
 
 import com.example.user_profile_service.dto.JobRequest;
+import com.example.user_profile_service.entity.Job;
 import com.example.user_profile_service.service.JobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,11 +17,12 @@ public class JobController {
     private final JobService jobService;
 
     @PostMapping("/create")
-    public ResponseEntity<String> createJob(
+    // FIX: Notice the return type here is now 'ResponseEntity<Job>'!
+    public ResponseEntity<Job> createJob(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,
             @RequestBody JobRequest request) {
 
-        String response = jobService.createJob(authHeader, request);
-        return ResponseEntity.ok(response);
+        Job savedJob = jobService.createJob(authHeader, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedJob);
     }
 }

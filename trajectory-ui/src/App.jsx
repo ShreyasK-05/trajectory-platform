@@ -1,24 +1,33 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "@/components/ui/sonner";
+
 import AuthGateway from "./pages/AuthGateway";
 import StudentOnboarding from "./pages/StudentOnboarding";
 import StudentDashboard from "./pages/StudentDashboard";
 import EmployerPostJob from "./pages/EmployerPostJob";
 import EmployerDashboard from "./pages/EmployerDashboard";
+import EmployerCandidateView from "./pages/EmployerCandidateView";
 
 function App() {
-  return (
-    <Router>
-      <div className="min-h-screen bg-slate-50 text-slate-900">
-        <Routes>
-          <Route path="/" element={<AuthGateway />} />
-          <Route path="/onboarding" element={<StudentOnboarding />} />
-          <Route path="/dashboard/student" element={<StudentDashboard />} />
-          <Route path="/jobs/new" element={<EmployerPostJob />} />
-          <Route path="/dashboard/employer" element={<EmployerDashboard />} />
-        </Routes>
-      </div>
-    </Router>
-  );
+    return (
+        <Router>
+            <div className="min-h-screen bg-slate-50 text-slate-900">
+                <Routes>
+                    <Route path="/" element={<AuthGateway />} />
+                    <Route path="/onboarding" element={<StudentOnboarding />} />
+                    <Route path="/dashboard/student" element={<StudentDashboard />} />
+                    <Route path="/jobs/new" element={<EmployerPostJob />} />
+
+                    {/* Your Recruiter Routes */}
+                    <Route path="/dashboard/employer" element={<EmployerDashboard />} />
+                    <Route path="/dashboard/employer/job/:id" element={<EmployerCandidateView />} />
+                </Routes>
+            </div>
+
+            {/* Enables slick popup notifications */}
+            <Toaster position="bottom-right" richColors />
+        </Router>
+    );
 }
 
 export default App;

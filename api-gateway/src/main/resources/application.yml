@@ -6,8 +6,21 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      server: # <-- NEW REQUIRED PREFIX
-        webmvc: # <-- NEW REQUIRED PREFIX
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+      server:
+        webmvc:
           routes:
             - id: auth-service-route
               uri: lb://AUTH-SERVICE
@@ -17,11 +30,6 @@ spring:
               uri: lb://USER-PROFILE-SERVICE
               predicates:
                 - Path=/profile/**
-            - id: profile-service-route
-              uri: lb://USER-PROFILE-SERVICE
-              predicates:
-                - Path=/profile/**
-
             - id: jobs-service-route
               uri: lb://USER-PROFILE-SERVICE
               predicates:

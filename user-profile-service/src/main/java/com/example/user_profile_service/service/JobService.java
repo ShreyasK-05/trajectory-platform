@@ -15,28 +15,26 @@ public class JobService {
     private final JwtExtractor jwtExtractor;
     private final KafkaEventPublisher kafkaEventPublisher;
 
-    public String createJob(String authHeader, JobRequest request) {
-        // 1. Extract the user's ID and Role from the JWT
+    // FIX: Notice the return type here is now 'Job', not 'String'!
+    public Job createJob(String authHeader, JobRequest request) {
         Long userId = jwtExtractor.getUserId(authHeader);
         String role = jwtExtractor.getRole(authHeader);
 
-        // 2. Security Check: Only Employers can post jobs!
         if (!"EMPLOYER".equalsIgnoreCase(role)) {
             throw new RuntimeException("Access Denied: Only Employers can post jobs.");
         }
 
-        // 3. Create the Job entity
         Job newJob = Job.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .company(request.getCompany())
                 .location(request.getLocation())
-                .recruiterId(userId) // Link the job to the Employer's ID!
+                .recruiterId(userId)
                 .build();
 
-        // 4. Save to PostgreSQL
-        jobRepository.save(newJob);
-        kafkaEventPublisher.publishJobCreated(newJob.getId(), newJob.getTitle(), newJob.getDescription());
-        return "Job '" + newJob.getTitle() + "' posted successfully by Recruiter ID: " + userId;
+        Job savedJob = jobRepository.save(newJob);
+        kafkaEventPublisher.publishJobCreated(savedJob.getId(), savedJob.getTitle(), savedJob.getDescription());
+
+        return savedJob;
     }
 }
