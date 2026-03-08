@@ -8,8 +8,8 @@ spring:
   # Database Connection Settings (Matching your Docker setup!)
   datasource:
     url: jdbc:postgresql://localhost:5433/skillmatching
-    username: admin
-    password: db123
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   # Hibernate Settings (This auto-creates our tables!)
