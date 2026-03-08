@@ -13,20 +13,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import api from "@/api";
+
+// This now perfectly matches your export const springApi from api.js
+import { springApi } from "@/api";
+
+function decodeJwt(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(window.atob(base64));
+  } catch (error) {
+    console.error("Error decoding token:", error);
+    return null;
+  }
+}
 
 export default function AuthGateway() {
   const navigate = useNavigate();
 
+  // --- LOGIN STATE ---
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
-  const [signupName, setSignupName] = useState("");
+  // --- SIGNUP STATE ---
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirm, setSignupConfirm] = useState("");
+  const [role, setRole] = useState("JOB_SEEKER"); 
   const [signupError, setSignupError] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
 
@@ -34,17 +49,29 @@ export default function AuthGateway() {
     e.preventDefault();
     setLoginError("");
     setLoginLoading(true);
+    
     try {
-      const res = await api.post("/api/auth/login", {
+      const res = await springApi.post("/auth/login", {
         email: loginEmail,
         password: loginPassword,
       });
-      localStorage.setItem("jwt_token", res.data.token);
-      navigate("/dashboard/student");
+      
+      const token = res.data.token;
+      localStorage.setItem("jwt_token", token);
+      
+      // Decode the token to find out who just logged in
+      const decodedPayload = decodeJwt(token);
+      
+      // Route them based on their backend role!
+      if (decodedPayload?.role === "EMPLOYER") {
+        navigate("/dashboard/employer");
+      } else {
+        navigate("/dashboard/student");
+      }
+      
     } catch (err) {
-      setLoginError(
-        err.response?.data?.message || "Invalid email or password."
-      );
+      console.error("Login Error:", err);
+      setLoginError(err.response?.data?.message || "Invalid email or password.");
     } finally {
       setLoginLoading(false);
     }
@@ -66,16 +93,31 @@ export default function AuthGateway() {
 
     setSignupLoading(true);
     try {
-      const res = await api.post("/api/auth/register", {
-        name: signupName,
+      // 1. Send the registration payload
+      await springApi.post("/auth/register", {
+        email: signupEmail,
+        password: signupPassword,
+        role: role,
+      });
+      
+      // 2. Automatically log them in to get the JWT
+      const loginRes = await springApi.post("/auth/login", {
         email: signupEmail,
         password: signupPassword,
       });
-      localStorage.setItem("jwt_token", res.data.token);
-      navigate("/onboarding");
+      
+      localStorage.setItem("jwt_token", loginRes.data.token);
+      
+      // 3. Route based on role
+      if (role === "EMPLOYER") {
+        navigate("/dashboard/employer");
+      } else {
+        navigate("/onboarding");
+      }
     } catch (err) {
+      console.error("Signup Error:", err);
       setSignupError(
-        err.response?.data?.message || "Registration failed. Please try again."
+        err.response?.data?.message || "Registration failed. Email might be in use or backend is unreachable."
       );
     } finally {
       setSignupLoading(false);
@@ -85,81 +127,76 @@ export default function AuthGateway() {
   return (
     <div className="flex min-h-screen">
       {/* ---- Left branding panel (60%) ---- */}
-      <div className="hidden lg:flex lg:w-[60%] flex-col justify-between bg-sidebar p-10">
+      <div className="hidden lg:flex lg:w-[60%] flex-col justify-between bg-slate-900 p-10">
         <div>
-          <h2 className="text-2xl font-bold text-sidebar-foreground">
-            Trajectory<span className="text-primary">AI</span>
+          <h2 className="text-2xl font-bold text-white">
+            Trajectory<span className="text-blue-500">AI</span>
           </h2>
         </div>
 
         <div className="space-y-6">
-          <h1 className="text-4xl font-bold leading-tight tracking-tight text-sidebar-foreground xl:text-5xl">
+          <h1 className="text-4xl font-bold leading-tight tracking-tight text-white xl:text-5xl">
             Your career{" "}
-            <span className="text-primary">launchpad</span>
+            <span className="text-blue-500">launchpad</span>
           </h1>
-          <p className="max-w-lg text-lg text-sidebar-foreground/70">
+          <p className="max-w-lg text-lg text-slate-300">
             Connect with top employers, discover opportunities matched by AI,
             and land your next role — all in one platform.
           </p>
           <div className="flex items-center gap-8 pt-4">
             <div>
-              <p className="text-3xl font-bold text-sidebar-foreground">500+</p>
-              <p className="text-sm text-sidebar-foreground/60">Active Jobs</p>
+              <p className="text-3xl font-bold text-white">500+</p>
+              <p className="text-sm text-slate-400">Active Jobs</p>
             </div>
-            <div className="h-10 w-px bg-sidebar-foreground/20" />
+            <div className="h-10 w-px bg-slate-700" />
             <div>
-              <p className="text-3xl font-bold text-sidebar-foreground">10k+</p>
-              <p className="text-sm text-sidebar-foreground/60">Candidates</p>
+              <p className="text-3xl font-bold text-white">10k+</p>
+              <p className="text-sm text-slate-400">Candidates</p>
             </div>
-            <div className="h-10 w-px bg-sidebar-foreground/20" />
+            <div className="h-10 w-px bg-slate-700" />
             <div>
-              <p className="text-3xl font-bold text-sidebar-foreground">82%</p>
-              <p className="text-sm text-sidebar-foreground/60">AI Match Rate</p>
+              <p className="text-3xl font-bold text-white">82%</p>
+              <p className="text-sm text-slate-400">AI Match Rate</p>
             </div>
           </div>
         </div>
 
-        <p className="text-xs text-sidebar-foreground/40">
+        <p className="text-xs text-slate-500">
           &copy; {new Date().getFullYear()} TrajectoryAI. All rights reserved.
         </p>
       </div>
 
       {/* ---- Right form panel (40%) ---- */}
-      <div className="flex w-full flex-col items-center justify-center bg-background px-6 py-10 lg:w-[40%]">
-        {/* Mobile branding — shown only on small screens */}
+      <div className="flex w-full flex-col items-center justify-center bg-slate-50 px-6 py-10 lg:w-[40%]">
+        {/* Mobile branding */}
         <div className="mb-8 text-center lg:hidden">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Trajectory<span className="text-primary">AI</span>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Trajectory<span className="text-blue-600">AI</span>
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-slate-500">
             Your career launchpad
           </p>
         </div>
 
         <div className="w-full max-w-md space-y-6">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
               Get started
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-slate-500">
               Sign in to your account or create a new one.
             </p>
           </div>
 
-          {/* Auth Card */}
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="w-full">
-              <TabsTrigger value="login" className="flex-1">
-                Log In
-              </TabsTrigger>
-              <TabsTrigger value="signup" className="flex-1">
-                Sign Up
-              </TabsTrigger>
+            <TabsList className="w-full grid grid-cols-2 mb-2">
+              <TabsTrigger value="login">Log In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
 
             {/* ---- Login Tab ---- */}
             <TabsContent value="login">
-              <Card>
+              <Card className="border-slate-200 shadow-sm">
                 <CardHeader>
                   <CardTitle>Welcome back</CardTitle>
                   <CardDescription>
@@ -178,6 +215,7 @@ export default function AuthGateway() {
                         required
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
+                        className="bg-white"
                       />
                     </div>
 
@@ -190,16 +228,17 @@ export default function AuthGateway() {
                         required
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
+                        className="bg-white"
                       />
                     </div>
 
                     {loginError && (
-                      <p className="text-sm text-destructive">{loginError}</p>
+                      <p className="text-sm font-medium text-red-500 bg-red-50 p-2 rounded-md border border-red-200">{loginError}</p>
                     )}
 
                     <Button
                       type="submit"
-                      className="w-full"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                       size="lg"
                       disabled={loginLoading}
                     >
@@ -207,25 +246,12 @@ export default function AuthGateway() {
                     </Button>
                   </form>
                 </CardContent>
-
-                <CardFooter className="flex-col gap-4">
-                  <div className="flex w-full items-center gap-3">
-                    <Separator className="flex-1" />
-                    <span className="text-xs text-muted-foreground">OR</span>
-                    <Separator className="flex-1" />
-                  </div>
-                  <p className="text-center text-sm text-muted-foreground">
-                    Don&apos;t have an account? Switch to the{" "}
-                    <span className="font-medium text-primary">Sign Up</span>{" "}
-                    tab.
-                  </p>
-                </CardFooter>
               </Card>
             </TabsContent>
 
             {/* ---- Sign Up Tab ---- */}
             <TabsContent value="signup">
-              <Card>
+              <Card className="border-slate-200 shadow-sm">
                 <CardHeader>
                   <CardTitle>Create an account</CardTitle>
                   <CardDescription>
@@ -236,18 +262,6 @@ export default function AuthGateway() {
                 <CardContent>
                   <form onSubmit={handleSignup} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="signup-name">Full Name</Label>
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="Jane Doe"
-                        required
-                        value={signupName}
-                        onChange={(e) => setSignupName(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
                       <Label htmlFor="signup-email">Email</Label>
                       <Input
                         id="signup-email"
@@ -256,6 +270,7 @@ export default function AuthGateway() {
                         required
                         value={signupEmail}
                         onChange={(e) => setSignupEmail(e.target.value)}
+                        className="bg-white"
                       />
                     </div>
 
@@ -268,6 +283,7 @@ export default function AuthGateway() {
                         required
                         value={signupPassword}
                         onChange={(e) => setSignupPassword(e.target.value)}
+                        className="bg-white"
                       />
                     </div>
 
@@ -280,16 +296,40 @@ export default function AuthGateway() {
                         required
                         value={signupConfirm}
                         onChange={(e) => setSignupConfirm(e.target.value)}
+                        className="bg-white"
                       />
                     </div>
 
+                    {/* Backend Role Toggle */}
+                    <div className="space-y-2 pt-2">
+                      <Label>I am a...</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <Button 
+                          type="button" 
+                          variant={role === "JOB_SEEKER" ? "default" : "outline"} 
+                          onClick={() => setRole("JOB_SEEKER")}
+                          className={role === "JOB_SEEKER" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-white"}
+                        >
+                          Job Seeker
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant={role === "EMPLOYER" ? "default" : "outline"} 
+                          onClick={() => setRole("EMPLOYER")}
+                          className={role === "EMPLOYER" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-white"}
+                        >
+                          Employer
+                        </Button>
+                      </div>
+                    </div>
+
                     {signupError && (
-                      <p className="text-sm text-destructive">{signupError}</p>
+                      <p className="text-sm font-medium text-red-500 bg-red-50 p-2 rounded-md border border-red-200">{signupError}</p>
                     )}
 
                     <Button
                       type="submit"
-                      className="w-full"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-2"
                       size="lg"
                       disabled={signupLoading}
                     >
@@ -297,19 +337,6 @@ export default function AuthGateway() {
                     </Button>
                   </form>
                 </CardContent>
-
-                <CardFooter className="flex-col gap-4">
-                  <div className="flex w-full items-center gap-3">
-                    <Separator className="flex-1" />
-                    <span className="text-xs text-muted-foreground">OR</span>
-                    <Separator className="flex-1" />
-                  </div>
-                  <p className="text-center text-sm text-muted-foreground">
-                    Already have an account? Switch to the{" "}
-                    <span className="font-medium text-primary">Log In</span>{" "}
-                    tab.
-                  </p>
-                </CardFooter>
               </Card>
             </TabsContent>
           </Tabs>
