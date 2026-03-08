@@ -54,6 +54,11 @@ export default function AuthGateway() {
     e.preventDefault();
     setSignupError("");
 
+    if (signupPassword.length < 8) {
+      setSignupError("Password must be at least 8 characters.");
+      return;
+    }
+
     if (signupPassword !== signupConfirm) {
       setSignupError("Passwords do not match.");
       return;
