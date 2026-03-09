@@ -40,3 +40,7 @@ __pycache__/
 
 ### files ###
 trajectory.session.sql
+
+# Ignore local startup logs
+logs/
+*.log

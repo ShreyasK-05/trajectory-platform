@@ -20,22 +20,18 @@ public class ProfileService {
     private final KafkaEventPublisher kafkaEventPublisher;
 
     public String onboardUser(String authHeader, ProfileRequest request) {
-        // 1. EXTRACT THE MASTER KEY (userId) FROM THE JWT!
         Long userId = jwtExtractor.getUserId(authHeader);
 
-        // 2. Check if a profile already exists for this user
         if (profileRepository.findByUserId(userId).isPresent()) {
             throw new RuntimeException("Profile already exists for this user!");
         }
 
-        // 3. Create the new Profile linking it to the userId
         Profile newProfile = Profile.builder()
                 .userId(userId)
                 .bio(request.getBio())
-                .isAiReady(false) // Will become true later when AI processes the resume
+                .isAiReady(false) 
                 .build();
 
-        // 4. Save to PostgreSQL
         profileRepository.save(newProfile);
 
         return "Profile created successfully for User ID: " + userId;
@@ -44,20 +40,27 @@ public class ProfileService {
     public String uploadResume(String authHeader, MultipartFile file) {
         Long userId = jwtExtractor.getUserId(authHeader);
 
+        // THE FIX: If the profile doesn't exist, build a brand new one!
         Profile profile = profileRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found! Please onboard first."));
+                .orElseGet(() -> Profile.builder()
+                        .userId(userId)
+                        .isAiReady(false)
+                        .build());
 
-        // 1. Extract the text (We already know this works!)
+        // 1. Extract the text 
         String extractedText = pdfExtractor.extractTextFromPdf(file);
         profile.setResumeText(extractedText);
 
-        // 2. UPLOAD THE PHYSICAL FILE TO MINIO!
+        // 2. Upload the physical file to MinIO
         String minioUrl = fileStorageService.uploadFile(file, userId);
-        profile.setResumeUrl(minioUrl); // Save the generated URL to the database
+        profile.setResumeUrl(minioUrl); 
 
         // 3. Save to PostgreSQL
         profileRepository.save(profile);
+        
+        // 4. Ping the AI Worker
         kafkaEventPublisher.publishResumeUploaded(userId, extractedText);
+        
         return "Success! Text extracted and file saved at: " + minioUrl;
     }
 }
