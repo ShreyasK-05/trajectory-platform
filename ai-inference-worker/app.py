@@ -91,6 +91,16 @@ def start_kafka_listener():
             
             # FIXED: Java is specifically looking for "entityId" and "SUCCESS"
             producer.produce(callback_topic, json.dumps({"entityId": entity_id, "status": "SUCCESS"}).encode('utf-8'))
+            #added: new topic for extracted text to career graph
+            skills_list = [s.strip().lower() for s in clean_skills_string.split(",") if s.strip()]
+            graph_topic = 'trajectory.ai.job_skills.extracted' if is_job else 'trajectory.ai.skills.extracted'
+            graph_payload = {
+                "entityId": entity_id,
+                "entityType": entity_type,
+                "status": "SUCCESS",
+                "extractedSkills": skills_list
+            }
+            producer.produce(graph_topic, json.dumps(graph_payload).encode('utf-8'))
             producer.flush()
             print(f"[{entity_type}] Vectorized and saved ID: {entity_id}")
     
