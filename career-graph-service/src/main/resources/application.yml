@@ -1,0 +1,28 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: career-graph-service
+  
+  # Neo4j Connection (Matches your docker-compose.yml)
+  neo4j:
+    uri: bolt://localhost:7687
+    authentication:
+      username: neo4j
+      password: ${NEO4J_PASSWORD:graphpass123} # Uses env var, defaults to 'secretpassword' if not found
+
+  # Kafka Consumer Settings
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: trajectory-graph-group-v2
+      auto-offset-reset: earliest
+
+# Eureka Registration
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
