@@ -1,66 +1,92 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { UploadCloud, FileText, CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
-import { toast } from "sonner"; // For error popups
+import { UploadCloud, FileText, CheckCircle2, ArrowRight, Sparkles, UserCircle } from "lucide-react";
+import { toast } from "sonner"; 
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { springApi } from "@/api"; // Your configured Axios instance
+import { springApi } from "@/api"; 
 
 export default function StudentOnboarding() {
   const navigate = useNavigate();
-  const fileInputRef = useRef(null); // Reference to our hidden file input
+  const fileInputRef = useRef(null); 
   
-  // Steps: 1 (Upload), 2 (Uploading/Parsing), 3 (Review)
+  // Steps: 1 (Bio), 2 (Upload), 3 (Parsing), 4 (Review)
   const [step, setStep] = useState(1);
   const [progress, setProgress] = useState(0);
   const [uploadedFileName, setUploadedFileName] = useState("");
+  
+  // New state for the Bio
+  const [bio, setBio] = useState("");
+  const [isSubmittingBio, setIsSubmittingBio] = useState(false);
 
-  // This triggers when the user selects a file from their computer
+  // --- STEP 1 HANDLER: Save Bio ---
+  const handleBioSubmit = async () => {
+    // If they left it blank, just treat it as a skip and move to Step 2
+    if (!bio.trim()) {
+      setStep(2);
+      return;
+    }
+
+    setIsSubmittingBio(true);
+    try {
+      // Hits your existing onboardUser method in Spring Boot!
+      await springApi.post("/profile/onboard", { bio });
+      setStep(2);
+    } catch (error) {
+      console.error("Bio upload failed:", error);
+      // If the profile already exists (e.g. they refreshed the page), just move forward
+      if (error.response?.data?.includes("already exists")) {
+          setStep(2);
+      } else {
+          toast.error("Failed to save bio. Is the backend running?");
+      }
+    } finally {
+      setIsSubmittingBio(false);
+    }
+  };
+
+  // --- STEP 2 HANDLER: Upload PDF ---
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // 1. Frontend validation (matches your backend validation!)
     if (file.type !== "application/pdf") {
       toast.error("Only PDF files are allowed!");
       return;
     }
 
     setUploadedFileName(file.name);
-    setStep(2); // Move to the loading screen
+    setStep(3); // Move to the loading screen
     
-    // UX: Start a fake progress bar just to look nice while the network works
     let currentProgress = 0;
     const progressInterval = setInterval(() => {
       currentProgress += 10;
-      setProgress(Math.min(currentProgress, 90)); // Cap at 90% until the API finishes
+      setProgress(Math.min(currentProgress, 90)); 
     }, 300);
 
     try {
-      // 2. Pack the file into a form-data object
       const formData = new FormData();
-      formData.append("file", file); // Must match the @RequestParam("file") in Spring Boot
+      formData.append("file", file); 
 
-      // 3. Send it to your ProfileController
+      // This will find the profile we just created in Step 1 and update it!
       await springApi.post("/profile/resume", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
 
-      // 4. Success! Fill the bar to 100% and move to the final step
       clearInterval(progressInterval);
       setProgress(100);
-      setTimeout(() => setStep(3), 500);
+      setTimeout(() => setStep(4), 500);
 
     } catch (error) {
       clearInterval(progressInterval);
       console.error("Upload failed:", error);
-      toast.error(error.response?.data || "Failed to upload resume. Is the backend running?");
-      setStep(1); // Kick them back to the upload screen
+      toast.error(error.response?.data || "Failed to upload resume.");
+      setStep(2); // Kick them back to the upload screen
     }
   };
 
@@ -80,8 +106,41 @@ export default function StudentOnboarding() {
 
       <Card className="w-full max-w-lg shadow-lg border-slate-200">
         
-        {/* STEP 1: UPLOAD */}
+        {/* STEP 1: BIO SETUP */}
         {step === 1 && (
+          <>
+            <CardHeader className="text-center pb-2">
+              <div className="mx-auto bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mb-4">
+                <UserCircle className="h-6 w-6 text-blue-600" />
+              </div>
+              <CardTitle className="text-2xl">Tell us about yourself</CardTitle>
+              <CardDescription>
+                Write a short bio. You can update this later when we add profile pictures and more details!
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <textarea 
+                className="flex min-h-[120px] w-full rounded-md border border-slate-200 bg-transparent px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                placeholder="I am a computer science student passionate about AI and full-stack development..."
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+              />
+            </CardContent>
+            <CardFooter className="flex justify-between border-t border-slate-100 pt-4">
+              <Button variant="ghost" onClick={() => setStep(2)}>Skip for now</Button>
+              <Button 
+                className="bg-blue-600 hover:bg-blue-700" 
+                onClick={handleBioSubmit}
+                disabled={isSubmittingBio}
+              >
+                {isSubmittingBio ? "Saving..." : "Continue"} <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </>
+        )}
+
+        {/* STEP 2: UPLOAD RESUME */}
+        {step === 2 && (
           <>
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-2xl">Upload Your Resume</CardTitle>
@@ -90,8 +149,6 @@ export default function StudentOnboarding() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              
-              {/* HIDDEN FILE INPUT */}
               <input 
                 type="file" 
                 accept="application/pdf" 
@@ -99,8 +156,6 @@ export default function StudentOnboarding() {
                 ref={fileInputRef} 
                 onChange={handleFileSelect} 
               />
-
-              {/* THE DROPZONE (Clicks the hidden input) */}
               <div 
                 className="border-2 border-dashed border-slate-300 rounded-lg p-10 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer" 
                 onClick={() => fileInputRef.current.click()}
@@ -109,7 +164,6 @@ export default function StudentOnboarding() {
                 <h3 className="font-medium text-slate-900 mb-1">Click to upload PDF</h3>
                 <p className="text-sm text-slate-500">Max file size: 5MB</p>
               </div>
-
             </CardContent>
             <CardFooter className="flex justify-between border-t border-slate-100 pt-4">
               <Button variant="ghost" onClick={handleFinish}>Skip for now</Button>
@@ -117,8 +171,8 @@ export default function StudentOnboarding() {
           </>
         )}
 
-        {/* STEP 2: PARSING / UPLOADING */}
-        {step === 2 && (
+        {/* STEP 3: PARSING / UPLOADING */}
+        {step === 3 && (
           <CardContent className="py-12 flex flex-col items-center justify-center text-center">
             <div className="relative mb-6">
               <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-75"></div>
@@ -137,8 +191,8 @@ export default function StudentOnboarding() {
           </CardContent>
         )}
 
-        {/* STEP 3: REVIEW */}
-        {step === 3 && (
+        {/* STEP 4: REVIEW */}
+        {step === 4 && (
           <>
             <CardHeader className="text-center pb-2">
               <div className="mx-auto bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mb-4">

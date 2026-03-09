@@ -9,6 +9,8 @@ else
   echo "⚠️ WARNING: No .env file found! Services might crash."
 fi
 
+export PYTHONUNBUFFERED=1
+
 echo "🚀 Booting TrajectoryAI Backend Stack..."
 
 # Create a logs folder to keep your terminal clean
@@ -35,8 +37,8 @@ echo "4/5: Starting API Gateway..."
 sleep 10
 
 # 5. AI Inference Worker (FastAPI)
-echo "5/5: Starting AI Inference Worker..."
-(cd ai-inference-worker && uvicorn app:app --reload --port 8000 > ../logs/ai-inference.log 2>&1) &
+#echo "5/5: Starting AI Inference Worker..."
+#(cd ai-inference-worker && uvicorn app:app --reload --port 8000 > ../logs/ai-inference.log 2>&1) &
 
 echo "✅ All backend services are running in the background!"
 echo "📄 You can view logs in the /logs directory."
