@@ -18,5 +18,10 @@ springApi.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+// 2. Python FastAPI Worker (Port 8000)
+export const pythonApi = axios.create({
+    baseURL: import.meta.env.VITE_PYTHON_API_URL || 'http://localhost:8000',
+});
+
 // We keep a default export just in case any of your older pages are still using `import api from './api'`
 export default springApi;

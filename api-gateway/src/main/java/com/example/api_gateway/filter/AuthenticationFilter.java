@@ -24,8 +24,6 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
 
-        
-
         // Let the invisible CORS preflight requests pass through without checking for a token!
         if (httpRequest.getMethod().equalsIgnoreCase("OPTIONS")) {
             filterChain.doFilter(request, response);

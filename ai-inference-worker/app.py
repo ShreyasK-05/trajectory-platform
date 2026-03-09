@@ -4,6 +4,7 @@ import threading
 import psycopg2
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sentence_transformers import SentenceTransformer
 from confluent_kafka import Consumer, Producer, KafkaException
 from contextlib import asynccontextmanager
@@ -107,6 +108,14 @@ async def lifespan(app: FastAPI):
     print("Shutting down the AI Engine safely...")
 
 app = FastAPI(title="Trajectory AI Engine", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"], # Trust the React frontend
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/match/user/{user_id}")
 def get_job_matches(user_id: str, limit: int = 5):
