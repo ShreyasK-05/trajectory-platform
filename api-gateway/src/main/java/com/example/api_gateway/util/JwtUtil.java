@@ -1,16 +1,17 @@
 package com.example.api_gateway.util;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import javax.crypto.SecretKey;
+
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 
 @Component
 public class JwtUtil {
 
     // THIS MUST MATCH THE EXACT SECRET IN YOUR AUTH SERVICE!
-    @org.springframework.beans.factory.annotation.Value("${SECRET_KEY}")
+    @org.springframework.beans.factory.annotation.Value("${SECRET_KEY:2410ea629073c9148011e924ba4f4cd6a7f9be4793df24d352e3f5faa4495fd1}")
     private String secretKey;
 
     public void validateToken(final String token) {
