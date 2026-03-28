@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Edit3
 } from "lucide-react";
+import StudentGraphView from "./StudentGraphView"; // Adjust path if needed
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,25 +26,48 @@ export default function StudentDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch the data the moment the dashboard loads
-  useEffect(() => {
+// Fetch the data and setup polling if AI is not ready
+useEffect(() => {
+    let isMounted = true;
+    let timeoutId = null;
+
     const fetchProfile = async () => {
       try {
         const response = await springApi.get("/profile/me");
-        setProfile(response.data);
+        
+        if (isMounted) {
+          // 🚨 DEBUG: Print exactly what Spring Boot is sending!
+          console.log("SPRING BOOT DATA:", response.data); 
+          
+          setProfile(response.data);
+          setIsLoading(false);
+
+          // Flexible check: Catch either 'aiReady' or 'isAiReady'
+          const isReady = response.data.aiReady === true || response.data.isAiReady === true;
+
+          // If not ready, poll again in 3 seconds
+          if (!isReady) {
+             timeoutId = setTimeout(fetchProfile, 3000);
+          }
+        }
       } catch (error) {
         console.error("Failed to load profile:", error);
-        // If the backend says they don't have a profile yet, force them to Onboarding
         if (error.response?.status === 500 || error.response?.status === 404) {
              navigate("/onboarding");
         }
-      } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     fetchProfile();
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [navigate]);
 
+  
   // Show a loading spinner while waiting for the database to respond
   if (isLoading) {
     return (
@@ -172,6 +196,14 @@ export default function StudentDashboard() {
           </Card>
 
         </div>
+
+        {/* --- FULL WIDTH GRAPH SECTION --- */}
+        {profile?.userId && (
+          <div className="w-full mb-8">
+            <StudentGraphView userId={profile.userId} />
+          </div>
+        )}
+        
       </main>
     </div>
   );

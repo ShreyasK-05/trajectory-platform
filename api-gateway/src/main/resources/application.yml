@@ -14,14 +14,21 @@ spring:
               uri: lb://AUTH-SERVICE
               predicates:
                 - Path=/auth/**
+                
             - id: profile-service-route
               uri: lb://USER-PROFILE-SERVICE
               predicates:
                 - Path=/profile/**
+                
             - id: jobs-service-route
               uri: lb://USER-PROFILE-SERVICE
               predicates:
                 - Path=/jobs/**
+                
+            - id: career-graph-service-route
+              uri: lb://CAREER-GRAPH-SERVICE
+              predicates:
+                - Path=/graph/**
 
 eureka:
   client:

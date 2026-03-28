@@ -4,7 +4,6 @@ import threading
 import psycopg2
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from sentence_transformers import SentenceTransformer
 from confluent_kafka import Consumer, Producer, KafkaException
 from contextlib import asynccontextmanager
@@ -92,6 +91,16 @@ def start_kafka_listener():
             
             # FIXED: Java is specifically looking for "entityId" and "SUCCESS"
             producer.produce(callback_topic, json.dumps({"entityId": entity_id, "status": "SUCCESS"}).encode('utf-8'))
+            #added: new topic for extracted text to career graph
+            skills_list = [s.strip().lower() for s in clean_skills_string.split(",") if s.strip()]
+            graph_topic = 'trajectory.ai.job_skills.extracted' if is_job else 'trajectory.ai.skills.extracted'
+            graph_payload = {
+                "entityId": entity_id,
+                "entityType": entity_type,
+                "status": "SUCCESS",
+                "extractedSkills": skills_list
+            }
+            producer.produce(graph_topic, json.dumps(graph_payload).encode('utf-8'))
             producer.flush()
             print(f"[{entity_type}] Vectorized and saved ID: {entity_id}")
     
@@ -108,14 +117,6 @@ async def lifespan(app: FastAPI):
     print("Shutting down the AI Engine safely...")
 
 app = FastAPI(title="Trajectory AI Engine", lifespan=lifespan)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"], # Trust the React frontend
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 @app.get("/match/user/{user_id}")
 def get_job_matches(user_id: str, limit: int = 5):
