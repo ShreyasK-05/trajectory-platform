@@ -25,4 +25,14 @@ public class JobController {
         Job savedJob = jobService.createJob(authHeader, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedJob);
     }
+
+    @GetMapping("/{jobId}")
+    public ResponseEntity<?> getJobById(@PathVariable Long jobId) {
+        try {
+            Job job = jobService.getJobById(jobId);
+            return ResponseEntity.ok(job);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
 }

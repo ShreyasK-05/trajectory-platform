@@ -9,30 +9,63 @@ import {
   Sparkles,
   Loader2,
   ExternalLink,
+  Target,
   Edit3
 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { springApi } from "@/api";
+import { springApi, pythonApi } from "@/api"; // Importing both backends!
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
   
-  // State to hold the data from your Spring Boot backend
   const [profile, setProfile] = useState(null);
+  const [matches, setMatches] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMatching, setIsMatching] = useState(false);
 
-  // Fetch the data the moment the dashboard loads
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const response = await springApi.get("/profile/me");
-        setProfile(response.data);
+        // 1. Get the user's profile and bio from Java
+        const profileRes = await springApi.get("/profile/me");
+        const userData = profileRes.data;
+        setProfile(userData);
+
+        // 2. If they have a profile, ask Python for their AI job matches
+        if (userData?.userId) {
+          setIsMatching(true);
+          try {
+            const matchRes = await pythonApi.get(`/match/user/${userData.userId}`);
+            
+            if (matchRes.data && matchRes.data.top_matches) {
+              const rawMatches = matchRes.data.top_matches;
+              
+              // 3. ENRICHMENT: Ask Spring Boot for the Title & Description of each Job ID!
+              const enrichedMatches = await Promise.all(
+                rawMatches.map(async (match) => {
+                  try {
+                    const jobDetails = await springApi.get(`/jobs/${match.job_id}`);
+                    return { ...match, jobData: jobDetails.data }; // Combine Python scores with Java data
+                  } catch (e) {
+                    console.error(`Failed to fetch details for Job ${match.job_id}`);
+                    return { ...match, jobData: { title: "Unknown Job", description: "Details unavailable" } };
+                  }
+                })
+              );
+              
+              setMatches(enrichedMatches);
+            }
+          } catch (matchErr) {
+            console.error("AI matching is still processing or unavailable:", matchErr);
+          } finally {
+            setIsMatching(false);
+          }
+        }
       } catch (error) {
         console.error("Failed to load profile:", error);
-        // If the backend says they don't have a profile yet, force them to Onboarding
         if (error.response?.status === 500 || error.response?.status === 404) {
              navigate("/onboarding");
         }
@@ -41,27 +74,25 @@ export default function StudentDashboard() {
       }
     };
 
-    fetchProfile();
+    fetchDashboardData();
   }, [navigate]);
 
-  // Show a loading spinner while waiting for the database to respond
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <Loader2 className="h-10 w-10 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-slate-500 font-medium">Loading your workspace...</p>
+          <p className="text-slate-500 font-medium">Loading your AI workspace...</p>
         </div>
       </div>
     );
   }
 
-  // Render the actual Dashboard once data is fetched
   return (
     <div className="flex min-h-screen bg-slate-50">
       
       {/* --- LEFT SIDEBAR --- */}
-      <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
+      <aside className="w-64 bg-slate-900 text-slate-300 flex-col hidden md:flex">
         <div className="h-16 flex items-center px-6 border-b border-slate-800">
           <h1 className="text-xl font-bold text-white tracking-wide">
             Trajectory<span className="text-blue-500">AI</span>
@@ -95,82 +126,95 @@ export default function StudentDashboard() {
             <h2 className="text-3xl font-bold text-slate-900">Welcome to your Dashboard</h2>
             <p className="text-slate-500 mt-1">Manage your AI career profile and job matches.</p>
           </div>
-          <Button variant="outline" className="bg-white hover:bg-slate-50 shadow-sm">
+          <Button variant="outline" className="bg-white hover:bg-slate-50 shadow-sm" onClick={() => navigate("/onboarding")}>
             <Edit3 className="mr-2 h-4 w-4" /> Edit Profile
           </Button>
         </div>
 
-        {/* AI Status Banner (Shows if the Python worker hasn't finished yet) */}
-        {!profile?.aiReady && (
-          <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Sparkles className="h-6 w-6 text-blue-600 animate-pulse" />
-              <div>
-                <h4 className="font-semibold text-blue-900">Your profile is being vectorized!</h4>
-                <p className="text-sm text-blue-700">Our AI workers are currently extracting advanced skills from your resume to match you with employers.</p>
-              </div>
-            </div>
-            <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
-              Processing
-            </Badge>
-          </div>
-        )}
-
         {/* Top Data Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           
-          {/* Resume Preview Card */}
+          {/* Profile & Bio Card */}
           <Card className="col-span-1 md:col-span-2 shadow-sm border-slate-200 bg-white">
             <CardHeader className="pb-2 border-b border-slate-100 mb-4">
-              <CardTitle className="text-lg font-semibold flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-blue-600"/> 
-                  Raw Extracted Text
-                </span>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <User className="h-5 w-5 text-blue-600"/> 
+                Your Bio
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {/* This displays the actual text your Java backend pulled from the PDF! */}
-              <div className="bg-slate-900 text-green-400 p-4 rounded-md h-[200px] overflow-y-auto text-xs font-mono shadow-inner whitespace-pre-wrap">
-                {profile?.resumeText ? profile.resumeText : "No text was extracted. Please re-upload your resume."}
+              <div className="bg-slate-50 text-slate-700 p-4 rounded-md text-sm border border-slate-100 whitespace-pre-wrap">
+                {profile?.bio ? profile.bio : "No bio provided yet. Click 'Edit Profile' to add one!"}
               </div>
             </CardContent>
           </Card>
 
-          {/* Database Info Card */}
+          {/* AI Status & Matches Card */}
           <Card className="shadow-sm border-slate-200 bg-white">
-            <CardHeader className="pb-2 border-b border-slate-100 mb-4">
-              <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                System Status
+            <CardHeader className="pb-2 border-b border-slate-100 mb-4 bg-gradient-to-r from-blue-50 to-white rounded-t-lg">
+              <CardTitle className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-blue-600" />
+                AI Job Matches
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">User ID / Primary Key</p>
-                <Badge variant="secondary" className="font-mono text-sm bg-slate-100 text-slate-700">
-                  {profile?.userId}
-                </Badge>
-              </div>
-              
-              <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">MinIO Storage Bucket</p>
-                {profile?.resumeUrl ? (
-                  <a 
-                    href={profile.resumeUrl} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors p-2 bg-blue-50 rounded-md border border-blue-100"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    View Original PDF
-                  </a>
-                ) : (
-                  <p className="text-sm text-slate-400 italic">No file uploaded</p>
-                )}
-              </div>
+            <CardContent>
+              {isMatching ? (
+                <div className="flex items-center gap-2 text-blue-600 text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Fetching vectors...
+                </div>
+              ) : matches.length > 0 ? (
+                <ul className="space-y-3">
+                  {matches.map((match, idx) => (
+                    <li key={idx} className="flex flex-col p-3 hover:bg-slate-50 rounded-md border border-slate-100 transition-colors gap-2">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <Target className="h-4 w-4 text-emerald-500 mt-1" />
+                          <div>
+                            <span className="text-md font-bold text-slate-900 block">
+                              {match.jobData?.title || `Job #${match.job_id}`}
+                            </span>
+                            <span className="text-xs text-slate-500 line-clamp-1">
+                              {match.jobData?.description || "No description available"}
+                            </span>
+                          </div>
+                        </div>
+                        <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 shrink-0">
+                          {match.similarity_score}% Match
+                        </Badge>
+                      </div>
+                      <Button variant="ghost" size="sm" className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50 mt-1 justify-between">
+                        View Job Details <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-slate-500 italic">No matches generated yet. Make sure your resume is vectorized and jobs are posted!</p>
+              )}
             </CardContent>
           </Card>
 
+        </div>
+        <div className="mt-8">
+          <Card className="shadow-sm border-slate-200 bg-white">
+            <CardHeader className="pb-2 border-b border-slate-100 mb-4 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-600"/> 
+                  Extracted Resume Data
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  This is the raw text the AI engine uses to calculate your vector matches.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Terminal-style window */}
+              <div className="bg-slate-900 text-emerald-400 p-6 rounded-md text-sm border border-slate-800 whitespace-pre-wrap h-96 overflow-y-auto font-mono shadow-inner">
+                {profile?.resumeText ? profile.resumeText : "No resume data found in the database."}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>

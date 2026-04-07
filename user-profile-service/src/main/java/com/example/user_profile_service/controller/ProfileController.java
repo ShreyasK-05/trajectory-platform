@@ -18,8 +18,12 @@ public class ProfileController {
     private final KafkaTemplate<String, String> kafkaTemplate;
 
     @GetMapping("/me")
-    public ResponseEntity<String> getMyProfile() {
-        return ResponseEntity.ok("Welcome to your secure profile! You bypassed the Gateway Bouncer using a valid JWT!");
+    public ResponseEntity<?> getMyProfile(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        try {
+            return ResponseEntity.ok(profileService.getMyProfile(authHeader));
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        }
     }
 
     @PostMapping("/onboard")

@@ -37,4 +37,9 @@ public class JobService {
 
         return savedJob;
     }
+
+    public Job getJobById(Long jobId) {
+        return jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+    }
 }

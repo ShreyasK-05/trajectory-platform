@@ -22,19 +22,26 @@ public class ProfileService {
     public String onboardUser(String authHeader, ProfileRequest request) {
         Long userId = jwtExtractor.getUserId(authHeader);
 
-        if (profileRepository.findByUserId(userId).isPresent()) {
-            throw new RuntimeException("Profile already exists for this user!");
-        }
+        // THE FIX: Find the existing profile, or create a brand new one if it doesn't exist!
+        Profile profile = profileRepository.findByUserId(userId)
+                .orElseGet(() -> Profile.builder()
+                        .userId(userId)
+                        .isAiReady(false) 
+                        .build());
 
-        Profile newProfile = Profile.builder()
-                .userId(userId)
-                .bio(request.getBio())
-                .isAiReady(false) 
-                .build();
+        // Update the bio with whatever came from the React form
+        profile.setBio(request.getBio());
 
-        profileRepository.save(newProfile);
+        // Save to PostgreSQL (this will execute an UPDATE if it existed, or INSERT if it was new)
+        profileRepository.save(profile);
 
-        return "Profile created successfully for User ID: " + userId;
+        return "Profile saved successfully for User ID: " + userId;
+    }
+
+    public Profile getMyProfile(String authHeader) {
+        Long userId = jwtExtractor.getUserId(authHeader);
+        return profileRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found for this user"));
     }
 
     public String uploadResume(String authHeader, MultipartFile file) {
