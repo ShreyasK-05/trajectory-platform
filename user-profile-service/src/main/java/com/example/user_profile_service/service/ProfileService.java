@@ -20,47 +20,56 @@ public class ProfileService {
     private final KafkaEventPublisher kafkaEventPublisher;
 
     public String onboardUser(String authHeader, ProfileRequest request) {
-        // 1. EXTRACT THE MASTER KEY (userId) FROM THE JWT!
         Long userId = jwtExtractor.getUserId(authHeader);
 
-        // 2. Check if a profile already exists for this user
-        if (profileRepository.findByUserId(userId).isPresent()) {
-            throw new RuntimeException("Profile already exists for this user!");
-        }
+        // THE FIX: Find the existing profile, or create a brand new one if it doesn't exist!
+        Profile profile = profileRepository.findByUserId(userId)
+                .orElseGet(() -> Profile.builder()
+                        .userId(userId)
+                        .isAiReady(false) 
+                        .build());
 
-        // 3. Create the new Profile linking it to the userId
-        Profile newProfile = Profile.builder()
-                .userId(userId)
-                .bio(request.getBio())
-                .isAiReady(false) // Will become true later when AI processes the resume
-                .build();
+        // Update the bio with whatever came from the React form
+        profile.setBio(request.getBio());
 
-        // 4. Save to PostgreSQL
-        profileRepository.save(newProfile);
+        // Save to PostgreSQL (this will execute an UPDATE if it existed, or INSERT if it was new)
+        profileRepository.save(profile);
 
-        return "Profile created successfully for User ID: " + userId;
+        return "Profile saved successfully for User ID: " + userId;
+    }
+
+    public Profile getMyProfile(String authHeader) {
+        Long userId = jwtExtractor.getUserId(authHeader);
+        return profileRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found for this user"));
     }
 
     public String uploadResume(String authHeader, MultipartFile file) {
         Long userId = jwtExtractor.getUserId(authHeader);
 
+        // THE FIX: If the profile doesn't exist, build a brand new one!
         Profile profile = profileRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found! Please onboard first."));
+                .orElseGet(() -> Profile.builder()
+                        .userId(userId)
+                        .isAiReady(false)
+                        .build());
 
-        // 1. Extract the text (We already know this works!)
+        // 1. Extract the text 
         String extractedText = pdfExtractor.extractTextFromPdf(file);
         profile.setResumeText(extractedText);
 
-        // 2. UPLOAD THE PHYSICAL FILE TO MINIO!
+        // 2. Upload the physical file to MinIO
         String minioUrl = fileStorageService.uploadFile(file, userId);
-        profile.setResumeUrl(minioUrl); // Save the generated URL to the database
+        profile.setResumeUrl(minioUrl); 
 
         // 3. Save to PostgreSQL
         profileRepository.save(profile);
+        
+        // 4. Ping the AI Worker
         kafkaEventPublisher.publishResumeUploaded(userId, extractedText);
+        
         return "Success! Text extracted and file saved at: " + minioUrl;
     }
-
     public Profile getCandidateProfile(String authHeader, Long candidateUserId) {
         // Optional: Security check to ensure only Employers can snoop on profiles
         String role = jwtExtractor.getRole(authHeader);
@@ -70,12 +79,6 @@ public class ProfileService {
 
         return profileRepository.findByUserId(candidateUserId)
                 .orElseThrow(() -> new RuntimeException("Profile not found for this candidate."));
-    }
-
-    public Profile getMyProfile(String authHeader) {
-        Long userId = jwtExtractor.getUserId(authHeader);
-        return profileRepository.findByUserId(userId)
-                .orElse(new Profile()); // Return empty profile if they haven't set one up yet
     }
 
     // 2. Save the Employer Profile

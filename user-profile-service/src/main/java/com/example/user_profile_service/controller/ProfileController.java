@@ -19,9 +19,12 @@ public class ProfileController {
     private final KafkaTemplate<String, String> kafkaTemplate;
 
     @GetMapping("/me")
-    public ResponseEntity<Profile> getMyProfile(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
-        // Now it actually fetches the Profile object from the database!
-        return ResponseEntity.ok(profileService.getMyProfile(authHeader));
+    public ResponseEntity<?> getMyProfile(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        try {
+            return ResponseEntity.ok(profileService.getMyProfile(authHeader));
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(e.getMessage());
+        }
     }
 
     // 2. NEW endpoint specifically for saving Recruiter settings

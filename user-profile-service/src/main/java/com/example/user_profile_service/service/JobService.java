@@ -47,4 +47,9 @@ public class JobService {
         // Fetch only their jobs from the database
         return jobRepository.findByRecruiterIdOrderByIdDesc(userId);
     }
+
+    public Job getJobById(Long jobId) {
+        return jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("Job not found with ID: " + jobId));
+    }
 }

@@ -33,4 +33,14 @@ public class JobController {
         List<Job> myJobs = jobService.getMyJobs(authHeader);
         return ResponseEntity.ok(myJobs);
     }
+
+    @GetMapping("/{jobId}")
+    public ResponseEntity<?> getJobById(@PathVariable Long jobId) {
+        try {
+            Job job = jobService.getJobById(jobId);
+            return ResponseEntity.ok(job);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
 }
