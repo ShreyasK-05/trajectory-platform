@@ -7,6 +7,8 @@ import com.example.user_profile_service.util.JwtExtractor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class JobService {
@@ -36,5 +38,13 @@ public class JobService {
         kafkaEventPublisher.publishJobCreated(savedJob.getId(), savedJob.getTitle(), savedJob.getDescription());
 
         return savedJob;
+    }
+
+    public List<Job> getMyJobs(String authHeader) {
+        // Extract who is asking
+        Long userId = jwtExtractor.getUserId(authHeader);
+
+        // Fetch only their jobs from the database
+        return jobRepository.findByRecruiterIdOrderByIdDesc(userId);
     }
 }

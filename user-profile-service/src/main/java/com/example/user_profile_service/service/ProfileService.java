@@ -60,4 +60,37 @@ public class ProfileService {
         kafkaEventPublisher.publishResumeUploaded(userId, extractedText);
         return "Success! Text extracted and file saved at: " + minioUrl;
     }
+
+    public Profile getCandidateProfile(String authHeader, Long candidateUserId) {
+        // Optional: Security check to ensure only Employers can snoop on profiles
+        String role = jwtExtractor.getRole(authHeader);
+        if (!"EMPLOYER".equalsIgnoreCase(role)) {
+            throw new RuntimeException("Access Denied: Only employers can view candidate profiles.");
+        }
+
+        return profileRepository.findByUserId(candidateUserId)
+                .orElseThrow(() -> new RuntimeException("Profile not found for this candidate."));
+    }
+
+    public Profile getMyProfile(String authHeader) {
+        Long userId = jwtExtractor.getUserId(authHeader);
+        return profileRepository.findByUserId(userId)
+                .orElse(new Profile()); // Return empty profile if they haven't set one up yet
+    }
+
+    // 2. Save the Employer Profile
+    public Profile saveEmployerProfile(String authHeader, ProfileRequest request) {
+        Long userId = jwtExtractor.getUserId(authHeader);
+
+        // Find existing profile, or create a new one
+        Profile profile = profileRepository.findByUserId(userId)
+                .orElse(Profile.builder().userId(userId).build());
+
+        // Update the fields
+        profile.setFullName(request.getFullName());
+        profile.setCompanyName(request.getCompanyName());
+        profile.setBio(request.getBio());
+
+        return profileRepository.save(profile);
+    }
 }

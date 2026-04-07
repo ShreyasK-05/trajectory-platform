@@ -8,5 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ProfileRequest {
+    private String fullName;
+    private String companyName;
     private String bio;
 }

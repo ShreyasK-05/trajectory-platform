@@ -31,4 +31,10 @@ public class Profile {
 
     // Flag for the frontend to know when the AI worker is done
     private Boolean isAiReady = false;
+
+    @Column(name = "full_name")
+    private String fullName;
+
+    @Column(name = "company_name")
+    private String companyName;
 }

@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/jobs")
 @RequiredArgsConstructor
@@ -24,5 +26,11 @@ public class JobController {
 
         Job savedJob = jobService.createJob(authHeader, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedJob);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<List<Job>> getMyJobs(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        List<Job> myJobs = jobService.getMyJobs(authHeader);
+        return ResponseEntity.ok(myJobs);
     }
 }

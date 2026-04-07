@@ -7,6 +7,7 @@ import StudentDashboard from "./pages/StudentDashboard";
 import EmployerPostJob from "./pages/EmployerPostJob";
 import EmployerDashboard from "./pages/EmployerDashboard";
 import EmployerCandidateView from "./pages/EmployerCandidateView";
+import RecruiterSettings from "@/pages/RecruiterSettings.jsx";
 
 function App() {
     return (
@@ -21,6 +22,7 @@ function App() {
                     {/* Your Recruiter Routes */}
                     <Route path="/dashboard/employer" element={<EmployerDashboard />} />
                     <Route path="/dashboard/employer/job/:id" element={<EmployerCandidateView />} />
+                    <Route path="/dashboard/employer/settings" element={<RecruiterSettings />} />
                 </Routes>
             </div>
 

@@ -1,6 +1,7 @@
 package com.example.user_profile_service.controller;
 
 import com.example.user_profile_service.dto.ProfileRequest;
+import com.example.user_profile_service.entity.Profile;
 import com.example.user_profile_service.service.ProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -18,8 +19,18 @@ public class ProfileController {
     private final KafkaTemplate<String, String> kafkaTemplate;
 
     @GetMapping("/me")
-    public ResponseEntity<String> getMyProfile() {
-        return ResponseEntity.ok("Welcome to your secure profile! You bypassed the Gateway Bouncer using a valid JWT!");
+    public ResponseEntity<Profile> getMyProfile(@RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader) {
+        // Now it actually fetches the Profile object from the database!
+        return ResponseEntity.ok(profileService.getMyProfile(authHeader));
+    }
+
+    // 2. NEW endpoint specifically for saving Recruiter settings
+    @PostMapping("/employer/onboard")
+    public ResponseEntity<Profile> updateEmployerProfile(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,
+            @RequestBody ProfileRequest request) {
+
+        return ResponseEntity.ok(profileService.saveEmployerProfile(authHeader, request));
     }
 
     @PostMapping("/onboard")
@@ -53,5 +64,18 @@ public class ProfileController {
         kafkaTemplate.send("trajectory.ai.vectorized", fakePythonMessage);
 
         return ResponseEntity.ok("Simulated AI callback sent to Kafka for User " + userId);
+    }
+
+    @GetMapping("/candidate/{userId}")
+    public ResponseEntity<?> getCandidateProfile(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authHeader,
+            @PathVariable Long userId) {
+
+        try {
+            Profile profile = profileService.getCandidateProfile(authHeader, userId);
+            return ResponseEntity.ok(profile);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }
