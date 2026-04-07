@@ -12,6 +12,7 @@ import {
   Target,
   Edit3
 } from "lucide-react";
+import StudentGraphView from "./StudentGraphView"; // Adjust path if needed
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,56 +28,64 @@ export default function StudentDashboard() {
   const [isMatching, setIsMatching] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+    let timeoutId = null;
+
     const fetchDashboardData = async () => {
       try {
-        // 1. Get the user's profile and bio from Java
         const profileRes = await springApi.get("/profile/me");
         const userData = profileRes.data;
-        setProfile(userData);
+        
+        if (isMounted) {
+          setProfile(userData);
+          setIsLoading(false);
 
-        // 2. If they have a profile, ask Python for their AI job matches
-        if (userData?.userId) {
-          setIsMatching(true);
-          try {
-            const matchRes = await pythonApi.get(`/match/user/${userData.userId}`);
-            
-            if (matchRes.data && matchRes.data.top_matches) {
-              const rawMatches = matchRes.data.top_matches;
-              
-              // 3. ENRICHMENT: Ask Spring Boot for the Title & Description of each Job ID!
-              const enrichedMatches = await Promise.all(
-                rawMatches.map(async (match) => {
-                  try {
-                    const jobDetails = await springApi.get(`/jobs/${match.job_id}`);
-                    return { ...match, jobData: jobDetails.data }; // Combine Python scores with Java data
-                  } catch (e) {
-                    console.error(`Failed to fetch details for Job ${match.job_id}`);
-                    return { ...match, jobData: { title: "Unknown Job", description: "Details unavailable" } };
-                  }
-                })
-              );
-              
-              setMatches(enrichedMatches);
-            }
-          } catch (matchErr) {
-            console.error("AI matching is still processing or unavailable:", matchErr);
-          } finally {
-            setIsMatching(false);
+          const isReady = userData.aiReady === true || userData.isAiReady === true;
+
+          // If aiReady is false, poll again
+          if (!isReady) {
+             timeoutId = setTimeout(fetchDashboardData, 3000);
+          } else if (userData?.userId && !isMatching && matches.length === 0) {
+             // AI is ready, let's fetch jobs
+             setIsMatching(true);
+             try {
+                const matchRes = await pythonApi.get(`/match/user/${userData.userId}`);
+                if (matchRes.data && matchRes.data.top_matches) {
+                   const rawMatches = matchRes.data.top_matches;
+                   const enrichedMatches = await Promise.all(
+                     rawMatches.map(async (match) => {
+                       try {
+                         const jobDetails = await springApi.get(`/jobs/${match.job_id}`);
+                         return { ...match, jobData: jobDetails.data }; 
+                       } catch (e) {
+                         return { ...match, jobData: { title: "Unknown Job", description: "Details unavailable" } };
+                       }
+                     })
+                   );
+                   setMatches(enrichedMatches);
+                }
+             } catch (err) {
+                 console.error(err);
+             } finally {
+                 setIsMatching(false);
+             }
           }
         }
       } catch (error) {
-        console.error("Failed to load profile:", error);
         if (error.response?.status === 500 || error.response?.status === 404) {
              navigate("/onboarding");
         }
-      } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [navigate]);
 
+    return () => {
+      isMounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [navigate]);
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -216,6 +225,13 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* --- FULL WIDTH GRAPH SECTION --- */}
+        {profile?.userId && (
+          <div className="w-full mb-8 pt-8">
+            <StudentGraphView userId={profile.userId} />
+          </div>
+        )}
       </main>
     </div>
   );

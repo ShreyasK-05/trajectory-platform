@@ -1,16 +1,18 @@
 package com.example.auth_service.service;
 
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.stereotype.Service;
+import java.util.Date;
 
 import javax.crypto.SecretKey;
-import java.util.Date;
+
+import org.springframework.stereotype.Service;
+
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 
 @Service
 public class JwtService {
 
-    @org.springframework.beans.factory.annotation.Value("${SECRET_KEY}")
+    @org.springframework.beans.factory.annotation.Value("${SECRET_KEY:2410ea629073c9148011e924ba4f4cd6a7f9be4793df24d352e3f5faa4495fd1}")
     private String secretKey;
 
     public String generateToken(Long userId, String email, String role) {

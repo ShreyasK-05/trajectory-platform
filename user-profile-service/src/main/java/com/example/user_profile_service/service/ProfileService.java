@@ -1,13 +1,15 @@
 package com.example.user_profile_service.service;
 
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.example.user_profile_service.dto.ProfileRequest;
 import com.example.user_profile_service.entity.Profile;
 import com.example.user_profile_service.repository.ProfileRepository;
 import com.example.user_profile_service.util.JwtExtractor;
 import com.example.user_profile_service.util.PdfExtractor;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -47,7 +49,7 @@ public class ProfileService {
     public String uploadResume(String authHeader, MultipartFile file) {
         Long userId = jwtExtractor.getUserId(authHeader);
 
-        // THE FIX: If the profile doesn't exist, build a brand new one!
+        // If the profile doesn't exist, build a brand new one!
         Profile profile = profileRepository.findByUserId(userId)
                 .orElseGet(() -> Profile.builder()
                         .userId(userId)
