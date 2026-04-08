@@ -37,4 +37,21 @@ public class Profile {
 
     @Column(name = "company_name")
     private String companyName;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
+    public String getResumeText() { return resumeText; }
+    public void setResumeText(String resumeText) { this.resumeText = resumeText; }
+    public String getResumeUrl() { return resumeUrl; }
+    public void setResumeUrl(String resumeUrl) { this.resumeUrl = resumeUrl; }
+    public Boolean getIsAiReady() { return isAiReady; }
+    public void setIsAiReady(Boolean isAiReady) { this.isAiReady = isAiReady; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getCompanyName() { return companyName; }
+    public void setCompanyName(String companyName) { this.companyName = companyName; }
 }

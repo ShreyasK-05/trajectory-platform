@@ -26,13 +26,20 @@ public class ProfileService {
 
         // THE FIX: Find the existing profile, or create a brand new one if it doesn't exist!
         Profile profile = profileRepository.findByUserId(userId)
-                .orElseGet(() -> Profile.builder()
-                        .userId(userId)
-                        .isAiReady(false) 
-                        .build());
+                .orElseGet(() -> {
+                    Profile p = new Profile();
+                    p.setUserId(userId);
+                    p.setIsAiReady(false);
+                    return p;
+                });
 
         // Update the bio with whatever came from the React form
-        profile.setBio(request.getBio());
+        if (request.getBio() != null) {
+            profile.setBio(request.getBio());
+        }
+        if (request.getFullName() != null) {
+            profile.setFullName(request.getFullName());
+        }
 
         // Save to PostgreSQL (this will execute an UPDATE if it existed, or INSERT if it was new)
         profileRepository.save(profile);
@@ -51,10 +58,12 @@ public class ProfileService {
 
         // If the profile doesn't exist, build a brand new one!
         Profile profile = profileRepository.findByUserId(userId)
-                .orElseGet(() -> Profile.builder()
-                        .userId(userId)
-                        .isAiReady(false)
-                        .build());
+                .orElseGet(() -> {
+                    Profile p = new Profile();
+                    p.setUserId(userId);
+                    p.setIsAiReady(false);
+                    return p;
+                });
 
         // 1. Extract the text 
         String extractedText = pdfExtractor.extractTextFromPdf(file);
@@ -89,7 +98,11 @@ public class ProfileService {
 
         // Find existing profile, or create a new one
         Profile profile = profileRepository.findByUserId(userId)
-                .orElse(Profile.builder().userId(userId).build());
+                .orElseGet(() -> {
+                    Profile p = new Profile();
+                    p.setUserId(userId);
+                    return p;
+                });
 
         // Update the fields
         profile.setFullName(request.getFullName());

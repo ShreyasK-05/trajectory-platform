@@ -21,6 +21,7 @@ export default function EmployerDashboard() {
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({ title: "", company: "", location: "", description: "" });
+    const [activeTab, setActiveTab] = useState("dashboard");
 
     useEffect(() => {
         const fetchData = async () => {
@@ -69,35 +70,34 @@ export default function EmployerDashboard() {
                     <h1 className="text-xl font-bold text-white tracking-wide">Trajectory<span className="text-blue-500">AI</span></h1>
                 </div>
                 <nav className="flex-1 py-6 space-y-2 px-4">
-                    {/* Changed simple <a> tags to React Router <Link> tags for faster navigation */}
-                    <Link to="/dashboard/employer" className="flex items-center gap-3 px-3 py-2 bg-blue-600/10 text-blue-400 rounded-md transition-colors">
+                    <button onClick={() => setActiveTab("dashboard")} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${activeTab === 'dashboard' ? 'bg-blue-600/10 text-blue-400' : 'hover:bg-slate-800'}`}>
                         <LayoutDashboard size={20} /> Dashboard
-                    </Link>
-                    <Link to="/dashboard/employer" className="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 rounded-md transition-colors">
+                    </button>
+                    <button onClick={() => setActiveTab("postings")} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${activeTab === 'postings' ? 'bg-blue-600/10 text-blue-400' : 'hover:bg-slate-800'}`}>
                         <Briefcase size={20} /> My Postings
-                    </Link>
-
-                    {/* --- NEW: Settings Link added here --- */}
-                    <Link to="/dashboard/employer/settings" className="flex items-center gap-3 px-3 py-2 hover:bg-slate-800 rounded-md transition-colors">
+                    </button>
+                    <button onClick={() => setActiveTab("settings")} className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${activeTab === 'settings' ? 'bg-blue-600/10 text-blue-400' : 'hover:bg-slate-800'}`}>
                         <Settings size={20} /> Settings
-                    </Link>
+                    </button>
                 </nav>
             </aside>
 
             {/* 2. MAIN CONTENT AREA */}
-            <main className="flex-1 p-8">
-                <div className="flex justify-between items-center mb-8">
-                    <div>
-                        {/* --- DYNAMIC WELCOME TEXT --- */}
-                        <h2 className="text-3xl font-bold text-slate-900">
-                            Welcome, {myProfile?.fullName || myProfile?.full_name || "Recruiter"}!
-                        </h2>
-                        <p className="text-slate-500 mt-1">Here is what is happening with your candidate pipeline today.</p>
+            <main className="flex-1 p-8 overflow-y-auto">
+                {activeTab === "dashboard" && (
+                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex justify-between items-center mb-8">
+                        <div>
+                            {/* --- DYNAMIC WELCOME TEXT --- */}
+                            <h2 className="text-3xl font-bold text-slate-900">
+                                Welcome, {myProfile?.fullName || myProfile?.full_name || "Recruiter"}!
+                            </h2>
+                            <p className="text-slate-500 mt-1">Here is what is happening with your candidate pipeline today.</p>
+                        </div>
+                        <Button onClick={() => setIsSheetOpen(true)} className="bg-blue-600 hover:bg-blue-700 shadow-md">
+                            <Plus className="mr-2 h-4 w-4" /> Post New Job
+                        </Button>
                     </div>
-                    <Button onClick={() => setIsSheetOpen(true)} className="bg-blue-600 hover:bg-blue-700 shadow-md">
-                        <Plus className="mr-2 h-4 w-4" /> Post New Job
-                    </Button>
-                </div>
 
                 {/* --- DYNAMIC Metrics Cards --- */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -165,6 +165,74 @@ export default function EmployerDashboard() {
                         )}
                     </CardContent>
                 </Card>
+                </div>
+                )}
+
+                {activeTab === "postings" && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto">
+                        <div className="flex justify-between items-center mb-8">
+                            <div>
+                                <h2 className="text-3xl font-heading font-extrabold text-slate-900 tracking-tight">Active Job Postings</h2>
+                                <p className="text-slate-500 mt-1 font-medium">Manage and track your sourced candidates.</p>
+                            </div>
+                            <Button onClick={() => setIsSheetOpen(true)} className="bg-blue-600 hover:bg-blue-700 shadow-md">
+                                <Plus className="mr-2 h-4 w-4" /> Post New Job
+                            </Button>
+                        </div>
+                        {isFetchingJobs ? (
+                            <div className="flex justify-center py-20"><Loader2 className="animate-spin h-8 w-8 text-blue-500" /></div>
+                        ) : myJobs.length === 0 ? (
+                            <Card className="glass border-white/60 shadow-lg rounded-2xl p-16 text-center">
+                                <Briefcase className="h-16 w-16 text-slate-300 mx-auto mb-6" />
+                                <h3 className="text-2xl font-bold text-slate-800">No Jobs Posted</h3>
+                                <p className="text-slate-500 mt-2 max-w-md mx-auto mb-8">You haven't posted any jobs yet. Create your first role to start matching with top candidates instantly.</p>
+                                <Button onClick={() => setIsSheetOpen(true)} className="bg-slate-900 hover:bg-slate-800 rounded-full px-8 py-6 text-lg"><Plus className="mr-2 h-5 w-5" /> Create a Job Posting</Button>
+                            </Card>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-6">
+                                {myJobs.map((job) => (
+                                    <Card key={job.id} className="glass border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl overflow-hidden hover:shadow-xl transition-shadow cursor-pointer group" onClick={() => navigate(`/dashboard/employer/job/${job.id}`)}>
+                                        <CardContent className="p-0">
+                                            <div className="flex flex-col md:flex-row md:items-center">
+                                                <div className="p-6 md:p-8 flex-1">
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <h3 className="text-2xl font-bold text-slate-900 group-hover:text-blue-700 transition-colors">{job.title}</h3>
+                                                        <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded">Active</span>
+                                                    </div>
+                                                    <p className="text-slate-500 text-lg mb-4">{job.company} • {job.location}</p>
+                                                    <p className="text-slate-600 line-clamp-2">{job.description}</p>
+                                                </div>
+                                                <div className="bg-slate-50/50 p-6 md:w-64 border-t md:border-t-0 md:border-l border-slate-200/60 flex flex-col justify-center items-center h-full">
+                                                    <div className="text-4xl font-bold font-heading text-blue-600 mb-2">Match</div>
+                                                    <Button variant="outline" className="w-full bg-white hover:bg-blue-50 border-blue-200 text-blue-700">View Candidates <ExternalLink className="ml-2 h-4 w-4" /></Button>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === "settings" && (
+                    <div className="relative z-10 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto mt-10">
+                        <h2 className="text-3xl font-heading font-extrabold text-slate-900 tracking-tight mb-8">Employer Settings</h2>
+                        <Card className="glass border-white/60 shadow-md rounded-2xl hover:shadow-lg transition-all cursor-pointer group">
+                        <CardContent className="p-6 flex items-center justify-between" onClick={() => { localStorage.removeItem('jwt_token'); navigate('/'); }}>
+                            <div className="flex items-center gap-4">
+                            <div className="p-3 bg-red-50 text-red-500 rounded-xl group-hover:bg-red-500 group-hover:text-white transition-colors">
+                                <Settings className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-900">Sign Out</h3>
+                                <p className="text-sm text-slate-500">Securely disconnect from the Trajectory platform.</p>
+                            </div>
+                            </div>
+                        </CardContent>
+                        </Card>
+                    </div>
+                )}
             </main>
 
             {/* 3. THE SLIDE-OUT JOB CREATION FORM */}

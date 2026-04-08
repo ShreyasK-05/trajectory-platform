@@ -41,7 +41,7 @@ export default function AuthGateway() {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirm, setSignupConfirm] = useState("");
-  const [role, setRole] = useState("JOB_SEEKER"); 
+  const [role, setRole] = useState("JOB_SEEKER");
   const [signupError, setSignupError] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
 
@@ -49,26 +49,26 @@ export default function AuthGateway() {
     e.preventDefault();
     setLoginError("");
     setLoginLoading(true);
-    
+
     try {
       const res = await springApi.post("/auth/login", {
         email: loginEmail,
         password: loginPassword,
       });
-      
+
       const token = res.data.token;
       localStorage.setItem("jwt_token", token);
-      
+
       // Decode the token to find out who just logged in
       const decodedPayload = decodeJwt(token);
-      
+
       // Route them based on their backend role!
       if (decodedPayload?.role === "EMPLOYER") {
         navigate("/dashboard/employer");
       } else {
         navigate("/dashboard/student");
       }
-      
+
     } catch (err) {
       console.error("Login Error:", err);
       setLoginError(err.response?.data?.message || "Invalid email or password.");
@@ -99,15 +99,15 @@ export default function AuthGateway() {
         password: signupPassword,
         role: role,
       });
-      
+
       // 2. Automatically log them in to get the JWT
       const loginRes = await springApi.post("/auth/login", {
         email: signupEmail,
         password: signupPassword,
       });
-      
+
       localStorage.setItem("jwt_token", loginRes.data.token);
-      
+
       // 3. Route based on role
       if (role === "EMPLOYER") {
         navigate("/dashboard/employer");
@@ -127,17 +127,22 @@ export default function AuthGateway() {
   return (
     <div className="flex min-h-screen">
       {/* ---- Left branding panel (60%) ---- */}
-      <div className="hidden lg:flex lg:w-[60%] flex-col justify-between bg-slate-900 p-10">
-        <div>
-          <h2 className="text-2xl font-bold text-white">
-            Trajectory<span className="text-blue-500">AI</span>
+      <div className="hidden lg:flex lg:w-[60%] flex-col justify-between bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 animate-gradient p-12 text-white shadow-2xl relative overflow-hidden">
+        {/* Subtle decorative circles */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+
+        <div className="relative z-10">
+          <h2 className="text-3xl font-heading font-bold tracking-tight">
+            Trajectory<span className="text-blue-400">AI</span>
           </h2>
         </div>
 
-        <div className="space-y-6">
-          <h1 className="text-4xl font-bold leading-tight tracking-tight text-white xl:text-5xl">
-            Your career{" "}
-            <span className="text-blue-500">launchpad</span>
+        <div className="space-y-8 relative z-10">
+          <h1 className="font-heading text-5xl font-extrabold leading-tight tracking-tight text-white xl:text-6xl drop-shadow-sm">
+            Your career
+            <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">launchpad</span>
           </h1>
           <p className="max-w-lg text-lg text-slate-300">
             Connect with top employers, discover opportunities matched by AI,
@@ -167,23 +172,24 @@ export default function AuthGateway() {
       </div>
 
       {/* ---- Right form panel (40%) ---- */}
-      <div className="flex w-full flex-col items-center justify-center bg-slate-50 px-6 py-10 lg:w-[40%]">
+      <div className="flex w-full flex-col items-center justify-center bg-slate-50 relative px-6 py-10 lg:w-[40%]">
+
         {/* Mobile branding */}
-        <div className="mb-8 text-center lg:hidden">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <div className="mb-8 text-center lg:hidden relative z-10">
+          <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-900">
             Trajectory<span className="text-blue-600">AI</span>
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-slate-500 font-medium">
             Your career launchpad
           </p>
         </div>
 
-        <div className="w-full max-w-md space-y-6">
+        <div className="w-full max-w-md space-y-8 relative z-10">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h2 className="font-heading text-3xl font-bold tracking-tight text-slate-900">
               Get started
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-slate-500">
               Sign in to your account or create a new one.
             </p>
           </div>
@@ -195,16 +201,16 @@ export default function AuthGateway() {
             </TabsList>
 
             {/* ---- Login Tab ---- */}
-            <TabsContent value="login">
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Welcome back</CardTitle>
-                  <CardDescription>
+            <TabsContent value="login" className="mt-4">
+              <Card className="glass border-white/60 shadow-xl overflow-hidden rounded-2xl">
+                <CardHeader className="bg-white/40 pb-6 border-b border-white/50">
+                  <CardTitle className="font-heading text-xl">Welcome back</CardTitle>
+                  <CardDescription className="text-slate-600">
                     Enter your credentials to access your account.
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent>
+                <CardContent className="pt-6">
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="login-email">Email</Label>
@@ -238,7 +244,7 @@ export default function AuthGateway() {
 
                     <Button
                       type="submit"
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md hover-lift font-medium"
                       size="lg"
                       disabled={loginLoading}
                     >
@@ -250,16 +256,16 @@ export default function AuthGateway() {
             </TabsContent>
 
             {/* ---- Sign Up Tab ---- */}
-            <TabsContent value="signup">
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Create an account</CardTitle>
-                  <CardDescription>
+            <TabsContent value="signup" className="mt-4">
+              <Card className="glass border-white/60 shadow-xl overflow-hidden rounded-2xl">
+                <CardHeader className="bg-white/40 pb-6 border-b border-white/50">
+                  <CardTitle className="font-heading text-xl">Create an account</CardTitle>
+                  <CardDescription className="text-slate-600">
                     Get started for free — no credit card required.
                   </CardDescription>
                 </CardHeader>
 
-                <CardContent>
+                <CardContent className="pt-6">
                   <form onSubmit={handleSignup} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="signup-email">Email</Label>
@@ -304,17 +310,17 @@ export default function AuthGateway() {
                     <div className="space-y-2 pt-2">
                       <Label>I am a...</Label>
                       <div className="grid grid-cols-2 gap-4">
-                        <Button 
-                          type="button" 
-                          variant={role === "JOB_SEEKER" ? "default" : "outline"} 
+                        <Button
+                          type="button"
+                          variant={role === "JOB_SEEKER" ? "default" : "outline"}
                           onClick={() => setRole("JOB_SEEKER")}
                           className={role === "JOB_SEEKER" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-white"}
                         >
                           Job Seeker
                         </Button>
-                        <Button 
-                          type="button" 
-                          variant={role === "EMPLOYER" ? "default" : "outline"} 
+                        <Button
+                          type="button"
+                          variant={role === "EMPLOYER" ? "default" : "outline"}
                           onClick={() => setRole("EMPLOYER")}
                           className={role === "EMPLOYER" ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-white"}
                         >
@@ -329,7 +335,7 @@ export default function AuthGateway() {
 
                     <Button
                       type="submit"
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-2"
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-4 shadow-md hover-lift font-medium"
                       size="lg"
                       disabled={signupLoading}
                     >

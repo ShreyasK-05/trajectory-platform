@@ -26,13 +26,12 @@ public class JobService {
             throw new RuntimeException("Access Denied: Only Employers can post jobs.");
         }
 
-        Job newJob = Job.builder()
-                .title(request.getTitle())
-                .description(request.getDescription())
-                .company(request.getCompany())
-                .location(request.getLocation())
-                .recruiterId(userId)
-                .build();
+        Job newJob = new Job();
+        newJob.setTitle(request.getTitle());
+        newJob.setDescription(request.getDescription());
+        newJob.setCompany(request.getCompany());
+        newJob.setLocation(request.getLocation());
+        newJob.setRecruiterId(userId);
 
         Job savedJob = jobRepository.save(newJob);
         kafkaEventPublisher.publishJobCreated(savedJob.getId(), savedJob.getTitle(), savedJob.getDescription());

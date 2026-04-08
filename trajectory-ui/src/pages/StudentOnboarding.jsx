@@ -1,31 +1,32 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { UploadCloud, FileText, CheckCircle2, ArrowRight, Sparkles, UserCircle } from "lucide-react";
-import { toast } from "sonner"; 
+import { toast } from "sonner";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { springApi } from "@/api"; 
+import { springApi } from "@/api";
 
 export default function StudentOnboarding() {
   const navigate = useNavigate();
-  const fileInputRef = useRef(null); 
-  
+  const fileInputRef = useRef(null);
+
   // Steps: 1 (Bio), 2 (Upload), 3 (Parsing), 4 (Review)
   const [step, setStep] = useState(1);
   const [progress, setProgress] = useState(0);
   const [uploadedFileName, setUploadedFileName] = useState("");
-  
-  // New state for the Bio
+
+  // New state for the Bio and Name
   const [bio, setBio] = useState("");
+  const [fullName, setFullName] = useState("");
   const [isSubmittingBio, setIsSubmittingBio] = useState(false);
 
-  // --- STEP 1 HANDLER: Save Bio ---
+  // --- STEP 1 HANDLER: Save Bio & Name ---
   const handleBioSubmit = async () => {
     // If they left it blank, just treat it as a skip and move to Step 2
-    if (!bio.trim()) {
+    if (!bio.trim() && !fullName.trim()) {
       setStep(2);
       return;
     }
@@ -33,15 +34,15 @@ export default function StudentOnboarding() {
     setIsSubmittingBio(true);
     try {
       // Hits your existing onboardUser method in Spring Boot!
-      await springApi.post("/profile/onboard", { bio });
+      await springApi.post("/profile/onboard", { bio, fullName });
       setStep(2);
     } catch (error) {
       console.error("Bio upload failed:", error);
       // If the profile already exists (e.g. they refreshed the page), just move forward
       if (error.response?.data?.includes("already exists")) {
-          setStep(2);
+        setStep(2);
       } else {
-          toast.error("Failed to save bio. Is the backend running?");
+        toast.error("Failed to save bio. Is the backend running?");
       }
     } finally {
       setIsSubmittingBio(false);
@@ -60,16 +61,16 @@ export default function StudentOnboarding() {
 
     setUploadedFileName(file.name);
     setStep(3); // Move to the loading screen
-    
+
     let currentProgress = 0;
     const progressInterval = setInterval(() => {
       currentProgress += 10;
-      setProgress(Math.min(currentProgress, 90)); 
+      setProgress(Math.min(currentProgress, 90));
     }, 300);
 
     try {
       const formData = new FormData();
-      formData.append("file", file); 
+      formData.append("file", file);
 
       // This will find the profile we just created in Step 1 and update it!
       await springApi.post("/profile/resume", formData, {
@@ -95,17 +96,20 @@ export default function StudentOnboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-      
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50/60 via-white to-blue-50/60 relative overflow-hidden flex flex-col items-center justify-center p-4">
+      {/* Decorative blurred backgrounds */}
+      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-80 h-80 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse animation-delay-2000"></div>
+
+      <div className="mb-8 text-center relative z-10">
+        <h1 className="text-4xl font-heading font-extrabold text-slate-900 tracking-tight">
           Trajectory<span className="text-blue-600">AI</span>
         </h1>
-        <p className="text-slate-500 mt-2">Let's build your AI-powered career profile.</p>
+        <p className="text-slate-500 mt-3 font-medium text-lg">Let's build your AI-powered career profile.</p>
       </div>
 
-      <Card className="w-full max-w-lg shadow-lg border-slate-200">
-        
+      <Card className="w-full max-w-lg glass border-white/60 shadow-xl rounded-2xl relative z-10">
+
         {/* STEP 1: BIO SETUP */}
         {step === 1 && (
           <>
@@ -118,18 +122,30 @@ export default function StudentOnboarding() {
                 Write a short bio. You can update this later when we add profile pictures and more details!
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-4">
-              <textarea 
-                className="flex min-h-[120px] w-full rounded-md border border-slate-200 bg-transparent px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                placeholder="I am a computer science student passionate about AI and full-stack development..."
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-              />
+            <CardContent className="pt-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Your Full Name</label>
+                <input
+                  className="flex w-full rounded-md border border-slate-200 bg-transparent px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  placeholder="e.g. John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Brief Bio</label>
+                <textarea
+                  className="flex min-h-[120px] w-full rounded-md border border-slate-200 bg-transparent px-3 py-2 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  placeholder="I am a computer science student passionate about AI and full-stack development..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                />
+              </div>
             </CardContent>
-            <CardFooter className="flex justify-between border-t border-slate-100 pt-4">
-              <Button variant="ghost" onClick={() => setStep(2)}>Skip for now</Button>
-              <Button 
-                className="bg-blue-600 hover:bg-blue-700" 
+            <CardFooter className="flex justify-between border-t border-white/40 pt-5">
+              <Button variant="ghost" className="hover-lift" onClick={() => setStep(2)}>Skip for now</Button>
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 hover-lift shadow-md font-medium"
                 onClick={handleBioSubmit}
                 disabled={isSubmittingBio}
               >
@@ -149,24 +165,24 @@ export default function StudentOnboarding() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <input 
-                type="file" 
-                accept="application/pdf" 
-                className="hidden" 
-                ref={fileInputRef} 
-                onChange={handleFileSelect} 
+              <input
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
               />
-              <div 
-                className="border-2 border-dashed border-slate-300 rounded-lg p-10 flex flex-col items-center justify-center text-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer" 
+              <div
+                className="border-2 border-dashed border-blue-200/60 rounded-xl p-10 flex flex-col items-center justify-center text-center bg-white/40 hover:bg-white/60 transition-colors cursor-pointer shadow-inner"
                 onClick={() => fileInputRef.current.click()}
               >
                 <UploadCloud className="h-12 w-12 text-blue-500 mb-4" />
-                <h3 className="font-medium text-slate-900 mb-1">Click to upload PDF</h3>
-                <p className="text-sm text-slate-500">Max file size: 5MB</p>
+                <h3 className="font-heading font-semibold text-lg text-slate-900 mb-1">Click to upload PDF</h3>
+                <p className="text-sm text-slate-500 font-medium">Max file size: 5MB</p>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between border-t border-slate-100 pt-4">
-              <Button variant="ghost" onClick={handleFinish}>Skip for now</Button>
+            <CardFooter className="flex justify-between border-t border-white/40 pt-5">
+              <Button variant="ghost" className="hover-lift font-medium" onClick={handleFinish}>Skip for now</Button>
             </CardFooter>
           </>
         )}
@@ -180,7 +196,7 @@ export default function StudentOnboarding() {
                 <Sparkles className="h-8 w-8 text-blue-600 animate-pulse" />
               </div>
             </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Uploading & Analyzing...</h3>
+            <h3 className="text-xl font-heading font-bold text-slate-900 mb-2">Uploading & Analyzing...</h3>
             <p className="text-slate-500 text-sm mb-6 max-w-xs">
               Sending your PDF to MinIO and spinning up the AI extraction workers.
             </p>
@@ -195,11 +211,11 @@ export default function StudentOnboarding() {
         {step === 4 && (
           <>
             <CardHeader className="text-center pb-2">
-              <div className="mx-auto bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mb-4">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              <div className="mx-auto bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mb-5 shadow-sm">
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
               </div>
-              <CardTitle className="text-2xl">Upload Successful!</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-2xl font-heading">Upload Successful!</CardTitle>
+              <CardDescription className="text-slate-600">
                 Your resume has been saved. Our AI is crunching the data in the background.
               </CardDescription>
             </CardHeader>
@@ -214,8 +230,8 @@ export default function StudentOnboarding() {
                 You will see your extracted skills appear on your dashboard shortly.
               </p>
             </CardContent>
-            <CardFooter className="flex justify-end border-t border-slate-100 pt-4">
-              <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto" onClick={handleFinish}>
+            <CardFooter className="flex justify-end border-t border-white/40 pt-5">
+              <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto hover-lift shadow-md font-medium" onClick={handleFinish}>
                 Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </CardFooter>

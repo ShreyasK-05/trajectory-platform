@@ -12,4 +12,9 @@ public class JobRequest {
     private String description;
     private String company;
     private String location;
+
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public String getCompany() { return company; }
+    public String getLocation() { return location; }
 }

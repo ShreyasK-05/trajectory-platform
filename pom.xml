@@ -14,6 +14,7 @@
         <module>api-gateway</module>
         <module>auth-service</module>
         <module>user-profile-service</module>
+        <module>career-graph-service</module>
     </modules>
 
     <properties>
